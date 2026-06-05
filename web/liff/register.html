@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>福泰會員註冊</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 16px; }
+    label { display: block; margin-top: 12px; font-weight: 600; }
+    input, select { width: 100%; padding: 10px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 20px; width: 100%; padding: 14px; background: #06c755; color: #fff; border: 0; border-radius: 8px; font-size: 16px; }
+    .msg { margin-top: 12px; color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>福泰會員註冊</h1>
+  <p>填寫一次，即可參加所有優惠活動。</p>
+  <form id="form">
+    <label>姓名<input name="name" required /></label>
+    <label>電話<input name="phone" type="tel" required /></label>
+    <label>Email<input name="email" type="email" /></label>
+    <label>性別
+      <select name="gender">
+        <option value="">請選擇</option>
+        <option>男</option>
+        <option>女</option>
+        <option>其他</option>
+      </select>
+    </label>
+    <label>出生年月日<input name="birth_date" type="date" /></label>
+    <label>首次參加館別
+      <select name="first_hotel" required>
+        <option value="">請選擇</option>
+        <option>汐止福泰大飯店</option>
+        <option>福泰翡翠灣渡假飯店</option>
+        <option>彰化福泰商務飯店</option>
+      </select>
+    </label>
+    <button type="submit">完成註冊</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const liffId = params.get('liffId') || '';
+    let lineUserId = params.get('lineUserId') || 'dev-user';
+
+    async function initLiff() {
+      if (!liffId || !window.liff) return;
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+    }
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      body.line_user_id = lineUserId;
+      const res = await fetch('/api/members/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      const msg = document.getElementById('msg');
+      if (!res.ok) {
+        msg.textContent = data.detail || '註冊失敗';
+        return;
+      }
+      msg.style.color = '#060';
+      msg.textContent = data.status === 'exists' ? '您已是會員！' : '註冊成功！';
+    });
+
+    initLiff().catch(console.error);
+  </script>
+</body>
+</html>

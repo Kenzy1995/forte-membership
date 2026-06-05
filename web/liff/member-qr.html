@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的會員 QR</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 16px; }
+    #qr { width: 240px; height: 240px; margin: 16px auto; }
+    button { padding: 12px 24px; background: #06c755; color: #fff; border: 0; border-radius: 8px; }
+    .hint { color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>我的會員 QR</h1>
+  <p id="name"></p>
+  <img id="qr" alt="會員 QR" />
+  <p class="hint">QR 約 60 秒有效，請於櫃台出示</p>
+  <button id="refresh">刷新 QR</button>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const liffId = params.get('liffId') || '';
+    let memberId = '';
+
+    async function initLiff() {
+      if (!liffId || !window.liff) return null;
+      await liff.init({ liffId });
+      if (!liff.isLoggedIn()) { liff.login(); return null; }
+      const profile = await liff.getProfile();
+      const res = await fetch('/api/members/by-line/' + encodeURIComponent(profile.userId));
+      if (!res.ok) throw new Error('尚未註冊');
+      const member = await res.json();
+      document.getElementById('name').textContent = member['姓名'] || '';
+      return member.member_id;
+    }
+
+    async function loadQr(id) {
+      const res = await fetch('/api/members/' + encodeURIComponent(id) + '/qr');
+      const data = await res.json();
+      document.getElementById('qr').src = 'data:image/png;base64,' + data.qr_image_base64;
+    }
+
+    async function main() {
+      try {
+        memberId = await initLiff();
+        if (!memberId) return;
+        await loadQr(memberId);
+        document.getElementById('refresh').onclick = () => loadQr(memberId);
+        setInterval(() => loadQr(memberId), 50000);
+      } catch (e) {
+        document.body.innerHTML = '<p>請先完成會員註冊</p>';
+      }
+    }
+    main();
+  </script>
+</body>
+</html>

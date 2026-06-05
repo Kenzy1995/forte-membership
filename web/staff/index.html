@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>櫃台核銷 — 福泰會員優惠</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 12px; }
+    #reader { width: 100%; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    button { padding: 12px; width: 100%; margin-top: 8px; background: #1a73e8; color: #fff; border: 0; border-radius: 8px; }
+    button:disabled { opacity: 0.5; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    .err { color: #c00; }
+    .ok { color: #060; }
+  </style>
+</head>
+<body>
+  <h1>櫃台核銷</h1>
+  <div id="login">
+    <label>館別<input id="hotel" value="汐止福泰大飯店" /></label>
+    <label>員工 ID<input id="staff_id" /></label>
+    <label>PIN<input id="pin" type="password" /></label>
+    <button id="btnLogin">登入</button>
+  </div>
+  <div id="panel" hidden>
+    <div id="reader"></div>
+    <div class="card" id="info"></div>
+    <label>活動
+      <select id="campaign"></select>
+    </label>
+    <label>社群平台
+      <select id="social">
+        <option value="">—</option>
+        <option>FB</option>
+        <option>IG</option>
+        <option>Google</option>
+      </select>
+    </label>
+    <button id="btnRedeem" disabled>確認兌換</button>
+    <p id="status"></p>
+  </div>
+  <script>
+    let session = null;
+    let lastQr = '';
+    let scanner = null;
+
+    document.getElementById('btnLogin').onclick = async () => {
+      const body = {
+        hotel: document.getElementById('hotel').value,
+        staff_id: document.getElementById('staff_id').value,
+        pin: document.getElementById('pin').value,
+      };
+      const res = await fetch('/api/staff/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) { alert('登入失敗'); return; }
+      session = body;
+      document.getElementById('login').hidden = true;
+      document.getElementById('panel').hidden = false;
+      startScanner();
+    };
+
+    async function onScan(content) {
+      lastQr = content;
+      const res = await fetch('/api/staff/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_content: content, campaign_id: '_', hotel: session.hotel, staff_id: session.staff_id }),
+      });
+      const data = await res.json();
+      const info = document.getElementById('info');
+      const sel = document.getElementById('campaign');
+      sel.innerHTML = '';
+      if (!res.ok) {
+        info.innerHTML = '<p class="err">' + (data.detail || '掃描失敗') + '</p>';
+        document.getElementById('btnRedeem').disabled = true;
+        return;
+      }
+      info.innerHTML = '<p><strong>' + data.member.name + '</strong>（電話末四碼 ' + data.member.phone_tail + '）</p>';
+      (data.active_campaigns || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.campaign_id;
+        opt.textContent = c['活動名稱'] || c.campaign_id;
+        sel.appendChild(opt);
+      });
+      document.getElementById('btnRedeem').disabled = false;
+    }
+
+    function startScanner() {
+      scanner = new Html5Qrcode('reader');
+      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, onScan, () => {});
+    }
+
+    document.getElementById('btnRedeem').onclick = async () => {
+      const btn = document.getElementById('btnRedeem');
+      btn.disabled = true;
+      setTimeout(() => { btn.disabled = false; }, 3000);
+      const status = document.getElementById('status');
+      const res = await fetch('/api/staff/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qr_content: lastQr,
+          campaign_id: document.getElementById('campaign').value,
+          hotel: session.hotel,
+          staff_id: session.staff_id,
+          social_platform: document.getElementById('social').value,
+        }),
+      });
+      const data = await res.json();
+      status.className = res.ok ? 'ok' : 'err';
+      status.textContent = res.ok ? '兌換成功' : (data.detail || '兌換失敗');
+    };
+  </script>
+</body>
+</html>
