@@ -8,6 +8,7 @@ on:
     paths:
       - 'server-api/**'
       - 'web/**'
+      - 'supabase/**'
       - '.github/workflows/deploy-staging.yml'
   workflow_dispatch:
 
@@ -65,7 +66,7 @@ jobs:
       - name: Check required secrets
         run: |
           if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then echo "::error::設定 staging GCP_PROJECT_ID"; exit 1; fi
-          if [ -z "${{ secrets.SPREADSHEET_ID }}" ]; then echo "::error::設定 staging SPREADSHEET_ID"; exit 1; fi
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "::error::設定 staging DATABASE_URL (Supabase)"; exit 1; fi
           if [ -z "${{ secrets.QR_SIGNING_SECRET }}" ]; then echo "::error::設定 staging QR_SIGNING_SECRET"; exit 1; fi
           if [ -z "${{ secrets.CLOUD_RUN_RUNTIME_SA }}" ]; then echo "::error::設定 staging CLOUD_RUN_RUNTIME_SA"; exit 1; fi
 
@@ -86,7 +87,7 @@ jobs:
             --service-account="${{ env.RUNTIME_SA }}" \
             --set-env-vars "ENVIRONMENT=staging" \
             --set-env-vars "GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}" \
-            --set-env-vars "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
             --set-env-vars "LINE_CHANNEL_SECRET=${{ secrets.LINE_CHANNEL_SECRET }}" \
             --set-env-vars "LINE_CHANNEL_ACCESS_TOKEN=${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}" \
             --set-env-vars "LIFF_ID_REGISTER=${{ secrets.LIFF_ID_REGISTER }}" \

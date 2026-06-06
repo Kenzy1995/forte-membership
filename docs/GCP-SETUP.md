@@ -1,64 +1,42 @@
-# GCP 測試環境設定（kenzy@dd99.games）
+# GCP 設定（bl88-risk / kenzy@dd99.games）
 
-## 1. 登入
+Cloud Run 只跑 API；**資料在 Supabase**，Runtime SA 不需 Sheets 權限。
 
-```bash
+## 一、重新登入（若 token 過期）
+
+```powershell
 gcloud auth login kenzy@dd99.games
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project bl88-risk
 ```
 
-## 2. 啟用 API
+## 二、一鍵建立資源
 
-```bash
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com sheets.googleapis.com
+```powershell
+cd 專案根目錄
+.\scripts\setup-gcp.ps1
 ```
 
-## 3. 建立 Artifact Registry（若尚未建立）
+會建立：
+- Artifact Registry：`asia-east1/forte-membership`
+- Runtime SA：`futai-member-run@bl88-risk.iam.gserviceaccount.com`
+- Deploy SA：`forte-membership-deploy@bl88-risk.iam.gserviceaccount.com`
+- 金鑰：`local/deploy-sa.json`（給 GitHub `GCP_CREDENTIALS`）
 
-```bash
-gcloud artifacts repositories create forte-membership \
-  --repository-format=docker \
-  --location=asia-east1
+## 三、寫入 GitHub Secrets
+
+```powershell
+gh secret set GCP_CREDENTIALS --env staging --repo Kenzy1995/forte-membership < local/deploy-sa.json
+gh secret set CLOUD_RUN_RUNTIME_SA --env staging --repo Kenzy1995/forte-membership --body "futai-member-run@bl88-risk.iam.gserviceaccount.com"
 ```
 
-## 4. 建立 Service Account
+## 四、部署
 
-```bash
-gcloud iam service-accounts create futai-member-sheets \
-  --display-name="Forte Membership Sheets"
+push `main` 或 Actions → Run workflow **Deploy Staging**。
 
-# Cloud Run 執行身分（可與部署 SA 分開）
-gcloud iam service-accounts create futai-member-run \
-  --display-name="Forte Membership Cloud Run"
+## 五、部署後
+
+```powershell
+gcloud run services describe futai-member-api --region asia-east1 --format="value(status.url)"
 ```
 
-分享 Google 試算表編輯權給：`futai-member-run@YOUR_PROJECT_ID.iam.gserviceaccount.com`
-
-## 5. 部署用 SA 金鑰（給 GitHub GCP_CREDENTIALS）
-
-```bash
-gcloud iam service-accounts keys create deploy-sa.json \
-  --iam-account=YOUR_DEPLOY_SA@YOUR_PROJECT_ID.iam.gserviceaccount.com
-```
-
-將 JSON 內容貼至 GitHub → Environment `staging` → Secret `GCP_CREDENTIALS`
-
-## 6. GitHub staging Secrets
-
-依 `docs/ENV-MANIFEST.txt` 逐項設定。設定後將 manifest 中 staging 欄改為 ✅。
-
-## 7. LINE Webhook
-
-部署完成取得 Cloud Run URL 後：
-
-```
-https://YOUR-SERVICE-URL/api/line/webhook
-```
-
-## 產生 STAFF_PIN_HASH
-
-```bash
-python -c "import bcrypt; print(bcrypt.hashpw(b'1234', bcrypt.gensalt()).decode())"
-```
-
-將輸出存入 GitHub Secret `STAFF_PIN_HASH`（請改用正式 PIN）。
+將 URL 用於 LINE Webhook 與 LIFF Endpoint。

@@ -4,35 +4,29 @@
 #   1. 本檔案（docs/ENV-MANIFEST.txt）
 #   2. GitHub → Settings → Environments → staging / production Secrets
 #   3. .github/workflows/deploy-staging.yml 的 --set-env-vars 區塊
-# 禁止將密碼值寫入程式碼或 commit 至 Git。
 # =============================================================================
-# 測試 GCP 帳號：kenzy@dd99.games
-# GitHub Repo：https://github.com/Kenzy1995/forte-membership
-# Cloud Run 服務名：futai-member-api
+# 測試 GCP：kenzy@dd99.games / project bl88-risk
+# 資料庫：Supabase PostgreSQL（免費方案）
+# GitHub：https://github.com/Kenzy1995/forte-membership
+# Cloud Run：futai-member-api
 # =============================================================================
 
 | 變數名稱                    | 用途                              | staging | production | 備註 |
 |----------------------------|-----------------------------------|---------|------------|------|
-| GCP_PROJECT_ID             | GCP 專案 ID                       | ⬜      | ⬜         | kenzy 帳號下既有 project |
-| GCP_CREDENTIALS            | GitHub Actions 部署用 SA JSON     | ⬜      | ⬜         | GitHub Secret only |
-| CLOUD_RUN_RUNTIME_SA       | Cloud Run 執行身分 SA email       | ⬜      | ⬜         | 需 Sheets 讀寫權限 |
-| SPREADSHEET_ID             | 會員優惠活動 Google 試算表 ID     | ⬜      | ⬜         | 獨立試算表，不共用接駁車 |
-| LINE_CHANNEL_SECRET        | LINE Webhook 請求驗簽             | ⬜      | ⬜         | Messaging API 設定頁 |
-| LINE_CHANNEL_ACCESS_TOKEN  | LINE 推播 / 回覆訊息              | ⬜      | ⬜         | Issue 長期 token |
-| LIFF_ID_REGISTER           | 會員註冊 LIFF App ID              | ⬜      | ⬜         | LINE Login channel |
-| LIFF_ID_MEMBER_QR          | 會員 QR 展示 LIFF App ID          | ⬜      | ⬜         | LINE Login channel |
-| QR_SIGNING_SECRET          | 會員 QR HMAC 簽章密鑰             | ⬜      | ⬜         | 自行產生隨機字串 |
-| STAFF_PIN_HASH             | 櫃台登入 PIN（bcrypt hash）       | ⬜      | ⬜         | 不存明文 PIN |
-| BASE_URL                   | 後端公開 HTTPS 網址               | ⬜      | ⬜         | 部署後由 workflow 自動注入 |
-| ENVIRONMENT                | 執行環境 staging/production       | ⬜      | ⬜         | workflow 自動注入 |
+| GCP_PROJECT_ID             | GCP 專案 ID                       | ✅      | ⬜         | bl88-risk |
+| GCP_CREDENTIALS            | GitHub Actions 部署用 SA JSON     | ⬜      | ⬜         | 見 docs/GCP-SETUP.md |
+| CLOUD_RUN_RUNTIME_SA       | Cloud Run 執行 SA email             | ⬜      | ⬜         | futai-member-run@... |
+| DATABASE_URL               | Supabase PostgreSQL 連線字串      | ⬜      | ⬜         | Transaction pooler 6543 |
+| LINE_CHANNEL_SECRET        | LINE Webhook 驗簽                 | ⬜      | ⬜         | |
+| LINE_CHANNEL_ACCESS_TOKEN  | LINE 推播                         | ⬜      | ⬜         | |
+| LIFF_ID_REGISTER           | 註冊 LIFF ID                      | ⬜      | ⬜         | |
+| LIFF_ID_MEMBER_QR          | 會員 QR LIFF ID                   | ⬜      | ⬜         | |
+| QR_SIGNING_SECRET          | 會員 QR HMAC 簽章                 | ✅      | ⬜         | 已產生，見 SETUP-MANUAL |
+| STAFF_PIN_HASH             | 櫃台 PIN bcrypt（預設 8888）      | ✅      | ⬜         | 已產生，見 SETUP-MANUAL |
+| BASE_URL                   | Cloud Run HTTPS 網址              | ⬜      | ⬜         | 部署後自動注入 |
+| ENVIRONMENT                | staging / production              | ⬜      | ⬜         | workflow 注入 |
 
-# =============================================================================
-# 正式版遷移 Checklist（逐項核對後標 ✅）
-# =============================================================================
-# [ ] 建立福泰企業 GCP Project
-# [ ] 建立 production GitHub Environment + 上表全部 Secrets
-# [ ] 建立正式版 Google Sheet + 分享 SA 編輯權
-# [ ] 部署 futai-member-api 至正式 Cloud Run
-# [ ] LINE Console 更新 Webhook URL 與 LIFF Endpoint
-# [ ] 更新 Rich Menu LIFF 連結
-# [ ] 汐止 / 翡翠灣 / 彰化 櫃台 PIN 與權限
+# 正式版遷移 Checklist
+# [ ] 福泰企業 GCP Project + Cloud SQL 或 Supabase Pro
+# [ ] production Environment 全部 Secrets
+# [ ] LINE Webhook / LIFF 更新為正式 URL
